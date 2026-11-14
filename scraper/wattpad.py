@@ -81,6 +81,27 @@ def rapikan_cerita(s, genre):
     }
 
 
+def ambil_komentar(story_id, part_id):
+    """Ambil komentar dari satu chapter (dipakai untuk chapter pertama tiap cerita).
+    Alamat ini yang berhasil di TES 2 (status 200)."""
+    url = f"https://www.wattpad.com/v5/comments/namespaces/parts/resources/{part_id}/comments"
+    r = requests.get(url, headers=HEADERS, timeout=20)
+    if r.status_code != 200:          # kalau gagal, jangan bikin program berhenti
+        return []
+    hasil = []
+    for k in r.json().get("comments", []):
+        hasil.append({
+            "id": k["commentId"]["resourceId"],          # ID unik komentar
+            "story_id": story_id,
+            "part_id": part_id,
+            "username": (k.get("user") or {}).get("name"),
+            "body": k.get("text"),
+            "created_at": k.get("created"),
+        })
+    time.sleep(JEDA)
+    return hasil
+
+
 # Bagian ini hanya jalan kalau file ini dijalankan langsung (untuk uji coba)
 if __name__ == "__main__":
     cerita = ambil_cerita("horor", jumlah=5)
@@ -89,3 +110,10 @@ if __name__ == "__main__":
         status = "Tamat" if c["completed"] else "Belum tamat"
         print(f"- {c['title']} | {c['author']} | dibaca {c['reads']:,} | "
               f"{c['parts']} chapter | {status}")
+
+    # uji ambil komentar dari cerita pertama
+    if cerita and cerita[0]["first_part_id"]:
+        komentar = ambil_komentar(cerita[0]["id"], cerita[0]["first_part_id"])
+        print(f"\nKomentar di chapter pertama '{cerita[0]['title']}': {len(komentar)}")
+        for k in komentar[:5]:
+            print(f"  {k['username']}: {k['body']}")
